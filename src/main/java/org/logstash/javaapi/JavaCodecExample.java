@@ -15,6 +15,7 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -46,12 +47,15 @@ public class JavaCodecExample implements Codec {
     @Override
     public void decode(ByteBuffer byteBuffer, Consumer<Map<String, Object>> consumer) {
         // a not-production-grade delimiter decoder
-        byte[] byteInput = byteBuffer.array();
+        byte[] byteInput = new byte[byteBuffer.remaining()];
+        byteBuffer.get(byteInput);
         if (byteInput.length > 0) {
-            String input = new String(byteBuffer.array());
+            String input = new String(byteInput);
             String[] split = input.split(delimiter);
             for (String s : split) {
-                consumer.accept(Collections.singletonMap("message", s));
+                Map<String, Object> map = new HashMap<>();
+                map.put("message", s);
+                consumer.accept(map);
             }
         }
     }
