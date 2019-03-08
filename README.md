@@ -61,12 +61,15 @@ public class JavaCodecExample implements Codec {
     @Override
     public void decode(ByteBuffer byteBuffer, Consumer<Map<String, Object>> consumer) {
         // a not-production-grade delimiter decoder
-        byte[] byteInput = byteBuffer.array();
+        byte[] byteInput = new byte[byteBuffer.remaining()];
+        byteBuffer.get(byteInput);
         if (byteInput.length > 0) {
-            String input = new String(byteBuffer.array());
+            String input = new String(byteInput);
             String[] split = input.split(delimiter);
             for (String s : split) {
-                consumer.accept(Collections.singletonMap("message", s));
+                Map<String, Object> map = new HashMap<>();
+                map.put("message", s);
+                consumer.accept(map);
             }
         }
     }
@@ -192,12 +195,15 @@ will be logged and will prevent Logstash from starting.
 @Override
 public void decode(ByteBuffer byteBuffer, Consumer<Map<String, Object>> consumer) {
     // a not-production-grade delimiter decoder
-    byte[] byteInput = byteBuffer.array();
+    byte[] byteInput = new byte[byteBuffer.remaining()];
+    byteBuffer.get(byteInput);
     if (byteInput.length > 0) {
-        String input = new String(byteBuffer.array());
+        String input = new String(byteInput);
         String[] split = input.split(delimiter);
         for (String s : split) {
-            consumer.accept(Collections.singletonMap("message", s));
+            Map<String, Object> map = new HashMap<>();
+            map.put("message", s);
+            consumer.accept(map);
         }
     }
 }
@@ -244,8 +250,9 @@ position to read and `byteBuffer.limit()` indicating the first byte in the buffe
 ensure that `byteBuffer.position()` reflects the last-read position before returning control to the input. The input
 is then responsible for returning the buffer to write mode via either `byteBuffer.clear()` or `byteBuffer.compact()`
 before resuming writes. In the example above, the `decode` method simply splits the incoming byte stream on the
-specified delimiter. A production-grade codec would likely not make the simplifying assumption that the end of the
-supplied byte stream corresponded with the end of an event.
+specified delimiter. A production-grade codec such as [`java-line`](https://github.com/elastic/logstash/blob/6.7/logstash-core/src/main/java/org/logstash/plugins/codecs/Line.java)
+would not make the simplifying assumption that the end of the supplied byte stream corresponded with the end of an 
+event.
 
 The `flush` method works in coordination with the `decode` method to decode all remaining events from the specified 
 `ByteBuffer` along with any internal state that may remain after previous calls to the `decode` method. As an example
@@ -383,7 +390,7 @@ class of the Java codec.
 `lib/logstash-codec-<codec-name>_jars.rb`
 ```
 require 'jar_dependencies'
-require_jar('org.logstash.javaapi', 'logstash-codec-java_codec_example', '0.0.1')
+require_jar('org.logstash.javaapi', 'logstash-codec-java_codec_example', '0.2.0')
 ```
 The following items should be modified in the file above:
 1. It should be named to correspond with the codec name.
@@ -403,6 +410,34 @@ Once your Java plugin has been packaged as a Ruby gem, it can be installed in Lo
 bin/logstash-plugin install --no-verify --local /path/to/javaPlugin.gem
 ```
 Substitute backslashes for forward slashes as appropriate in the command above for installation on Windows platforms. 
+
+### Running Logstash with the Java codec plugin
+
+To test the plugin, start Logstash with:
+
+```
+echo "foo,bar" | bin/logstash --java-execution -e 'input { java_stdin { codec => java_codec_example } } }'
+```
+
+Note that the `--java-execution` flag to enable the Java execution engine is required as Java plugins are not supported
+in the Ruby execution engine.
+
+The expected Logstash output (excluding initialization) with the configuration above is:
+
+```
+{
+      "@version" => "1",
+       "message" => "foo",
+    "@timestamp" => yyyy-MM-ddThh:mm:ss.SSSZ,
+          "host" => "<yourHostName>"
+}
+{
+      "@version" => "1",
+       "message" => "bar\n",
+    "@timestamp" => yyyy-MM-ddThh:mm:ss.SSSZ,
+          "host" => "<yourHostName>"
+}
+```
 
 ### Feedback
 
