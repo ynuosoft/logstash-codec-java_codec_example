@@ -52,8 +52,8 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.5"
     implementation "com.fasterxml.jackson.core:jackson-annotations:2.9.5"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.5"
-    implementation fileTree(dir: LOGSTASH_CORE_PATH, include: "**/logstash-core-?.?.?.jar")
-
+//    implementation fileTree(dir: LOGSTASH_CORE_PATH, include: "**/logstash-core-?.?.?.jar")
+    implementation fileTree(dir: LOGSTASH_CORE_PATH, include: "build/libs/logstash-core.jar")
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.jruby:jruby-complete:9.1.13.0'
 }
